@@ -254,12 +254,18 @@ def get_file_data():
         data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
     else:
         print("Step 5. already done!")
+    
+    # step 6. estimate cell temperature based on module temperature, and absorbed radiation if it's not measured:
+    if "cell_temp" not in data_file.columns:
+        data_file = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data_file)
+    else:
+        print("Step 6. already done!")
 
-    # step 6. estimate power output
+    # step 7. estimate power output
     if "output" not in data_file.columns:
         data_file = helpers.output_estimator.add_output_to_df(data_file)
     else:
-        print("Step 6. already done!")
+        print("Step 7. already done!")
 
     return data_file
 

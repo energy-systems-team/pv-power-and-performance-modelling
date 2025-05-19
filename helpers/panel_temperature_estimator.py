@@ -2,8 +2,10 @@
 This file contains functions for estimating PV panel temperatures and transferring temperature data from another
 dataframe.
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
+
 import math
 import pandas
 import config
@@ -46,6 +48,41 @@ def add_estimated_panel_temperature(df:pandas.DataFrame)-> pandas.DataFrame:
 
     # applying helper function to dataset and storing result as a new column
     df["module_temp"] = df.apply(helper_add_panel_temp, axis=1)
+
+    return df
+
+
+def add_estimated_cell_temperature(df:pandas.DataFrame)-> pandas.DataFrame:
+    """
+    Adds an estimate for cell temperature based on module temperature, and absorbed radiation.
+    If module temperature, or absorbed radiation columns are missing, aborts.
+    If columns exists but temperature function returns nan due to faulty input, uses module temperature which should always
+    be present in df.
+    :param df:
+    :return:
+
+    """
+
+    # checking that all required variables exist in df
+    if "module_temp" not in df.columns:
+        print("No module temperature variable in given dataframe")
+        print("Aborting")
+        return df
+
+    if "poa_ref_cor" not in df.columns:
+        print("no reflection corrected poa value in df 'poa_ref_cor'")
+        print("Aborting")
+        return df
+
+    def helper_add_cell_temp(df):
+        estimated_temp = temperature_of_cell(df["poa_ref_cor"], df["module_temp"])
+        if math.isnan(estimated_temp):
+            return df["module_temp"]
+        else:
+            return estimated_temp
+
+    # applying helper function to dataset and storing result as a new column
+    df["cell_temp"] = df.apply(helper_add_cell_temp, axis=1)
 
     return df
 
@@ -131,3 +168,24 @@ def temperature_of_module(absorbed_radiation: float, wind: float, module_elevati
     module_temperature = absorbed_radiation * math.e ** (constant_a + constant_b * wind_speed) + air_temperature
 
     return module_temperature
+
+
+def temperature_of_cell(absorbed_radiation: float, module_temp: float) ->float:
+    """
+    :param absorbed_radiation: radiation hitting solar panel after reflections are accounted for in W
+    :param module_temperature: module temperature in Celsius
+    :return: cell temperature in Celsius
+
+    King 2004 model
+    D.~King, J.~Kratochvil, and W.~Boyson,
+    Photovoltaic Array Performance Model Vol. 8,
+    PhD thesis (Sandia Naitional Laboratories, 2004).
+    """
+
+    # Temperature difference of the cell and module.
+    # NOTE changes between installations, and fine-tuning might be needed for accuracy.
+    deltaT = 3
+
+    cell_temperature = module_temp + absorbed_radiation / 1000 * deltaT
+
+    return cell_temperature
