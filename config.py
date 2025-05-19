@@ -10,7 +10,9 @@ Author: TimoSalola (Timo Salola).
 site_name = "output_example"
 save_directory = "output/"
 save_csv = False #value= [True] or [False] this variable toggles csv file saving on or off
-console_print = True #value= [True] or [False] this variable toggles console printing of the full output table on or off
+console_print = False #value= [True] or [False] this variable toggles console printing of the full output table on or off
+save_data_csv = True
+calculate_irradiance_components = True
 
 #### SIMULATED INSTALLATION PARAMETERS BELOW:
 # coordinates
@@ -93,4 +95,8 @@ def set_params_kuopio():
     module_elevation = elevation_kuopio
 
 
-
+########### PARAMETERS FOR DATA FILES BELOW:
+data_path = "data"
+read_file_name = "helsinki_preprocessed_1.csv"
+write_file_name = "helsinki_preprocessed_2.csv"
+data_file_sep = ";"

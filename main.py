@@ -167,6 +167,9 @@ def get_fmi_data(day_range=3):
     # step 6. estimate power output
     data = helpers.output_estimator.add_output_to_df(data)
 
+    print(f"data_fmi: {data.columns}")
+    print("-------------------")
+
     config.data_resolution = original_data_resolution
 
     return data
@@ -211,7 +214,42 @@ def get_pvlib_data(day_range=3, data_fmi=None):
 
     data_pvlib = data_pvlib.dropna()
 
+    print(f"data_pvlib: {data_pvlib.columns}")
+    print("-------------------")
+
     return data_pvlib
+
+
+def get_file_data():
+    """
+    This function shows the steps used for generating power output data with pvlib. Also returns the power output.
+    PVlib is fully simulated, no restrictions on day range.
+    :param day_range: Day count, 1 returns only this day, 3 returns this day and the 2 following days.
+    :param data_fmi: If fmi df is given here, it will be used as weather data donor df
+    :return: Power output dataframe
+    """
+    # step 1. read the file
+    data_file = pd.read_csv(config.data_path + "/" + config.read_file_name, sep=config.data_file_sep)
+    data_file.set_index('utctime', inplace=True)
+    data_file.index = pd.to_datetime(data_file.index)
+
+    if config.calculate_irradiance_components:
+        # step 2. project irradiance components to plane of array:
+        data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
+
+        # step 3. simulate how much of irradiance components is absorbed:
+        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
+
+        # step 4. compute sum of reflection-corrected components:
+        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
+    
+    # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation
+    data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
+
+    # step 6. estimate power output
+    data_file = helpers.output_estimator.add_output_to_df(data_file)
+
+    return data_file
 
 
 def combined_processing_of_data():
@@ -222,61 +260,65 @@ def combined_processing_of_data():
 
     day_range = 3
 
-    print("Simulating clear sky and weather model based PV generation for the next " + str(day_range) +" days.")
+    # print("Simulating clear sky and weather model based PV generation for the next " + str(day_range) +" days.")
     # fetching fmi data and generating solar pv output df
 
-    data_fmi = get_fmi_data(day_range)
+    #data_fmi = get_fmi_data(day_range)
 
     # generating pvlib irradiance values and clear sky pv dataframe, passing fmi data to pvlib generator functions
     # for wind and air temp transfer
-    data_pvlib = get_pvlib_data(day_range, data_fmi)
+    #data_pvlib = get_pvlib_data(day_range, data_fmi)
 
+    # Reading file containing historical weather and PV data
+    data_file = get_file_data()
 
+    print(data_file.columns)
+
+    if config.save_data_csv:
+        data_file.to_csv(config.data_path + "/" + config.write_file_name, sep=config.data_file_sep)
     # this line prints the full results into console/terminal
 
-    if config.console_print:
-        print("-------------------------------------------------------------------------------------------------------")
-        print("Output table printing is turned on in the config.py file")
-        print("-----Data-----")
-
-        print_full(data_fmi)
-
-        print("-----Columns explained-----")
-        print(
-            "[index(Time)]: Meteorological time. In meteorology, timestamp for 13:00 represents the time 12:00-13:00.")
-        print("[time]: This is time index shifted by 30min. More useful than the meteorological time for physics.")
-        print("[dni, dhi, ghi]: Irradiance types, these can be used for estimating radiation from direct radiation,"
-              " atmosphere scattered radiation and ground reflected radiation.")
-        print("[albedo]: Ground reflectivity near installation. This is retrieved from fmi open data service. Should be"
-              "between 0 and 1.")
-        print("[T]: Air temperature at 2m.")
-        print("[wind]: Wind speed at 2m.")
-        print("[cloud_cover]: Cloudiness percentage, between 0 and 100.")
-        print("[dni_poa, dhi_poa, ghi_poa]: Transpositions of dni, dhi and ghi to the plane of array(POA). These values"
-              " are always positive and lower than their non _poa counterparts.")
-        print("[poa]: Sum of dni_poa, dhi_poa, ghi_poa. Represents the amount of radiation reaching the panel surface."
-              " This does not account for panel reflectivity.")
-        print("[dni_rc, dhi_rc, ghi_rc]: Transpositions of radiation types with reflection corrections. These are lower"
-              "than their '_poa' counterparts.")
-        print("[poa_ref_cor]: Sum of dni_rc, dhi_rc and ghi_rc. This represents the amount of radiation absorbed by the"
-              " solar panels.")
-        print(
-            "[module_temp]: Estimated value for solar panel temperature. Based on air temp, wind speed and radiation.")
-        print("[output]: System output in watts.")
-        print("Note that all values before [output] are for a simulated theoretical 1m² panel.")
-        print("-------------------------------------------------------------------------------------------------------")
+    # if config.console_print:
+    #     print("-------------------------------------------------------------------------------------------------------")
+    #     print("Output table printing is turned on in the config.py file")
+    #     print("-----Data-----")
+    #     print_full(data_fmi)
+    #     print("-----Columns explained-----")
+    #     print(
+    #         "[index(Time)]: Meteorological time. In meteorology, timestamp for 13:00 represents the time 12:00-13:00.")
+    #     print("[time]: This is time index shifted by 30min. More useful than the meteorological time for physics.")
+    #     print("[dni, dhi, ghi]: Irradiance types, these can be used for estimating radiation from direct radiation,"
+    #           " atmosphere scattered radiation and ground reflected radiation.")
+    #     print("[albedo]: Ground reflectivity near installation. This is retrieved from fmi open data service. Should be"
+    #           "between 0 and 1.")
+    #     print("[T]: Air temperature at 2m.")
+    #     print("[wind]: Wind speed at 2m.")
+    #     print("[cloud_cover]: Cloudiness percentage, between 0 and 100.")
+    #     print("[dni_poa, dhi_poa, ghi_poa]: Transpositions of dni, dhi and ghi to the plane of array(POA). These values"
+    #           " are always positive and lower than their non _poa counterparts.")
+    #     print("[poa]: Sum of dni_poa, dhi_poa, ghi_poa. Represents the amount of radiation reaching the panel surface."
+    #           " This does not account for panel reflectivity.")
+    #     print("[dni_rc, dhi_rc, ghi_rc]: Transpositions of radiation types with reflection corrections. These are lower"
+    #           "than their '_poa' counterparts.")
+    #     print("[poa_ref_cor]: Sum of dni_rc, dhi_rc and ghi_rc. This represents the amount of radiation absorbed by the"
+    #           " solar panels.")
+    #     print(
+    #         "[module_temp]: Estimated value for solar panel temperature. Based on air temp, wind speed and radiation.")
+    #     print("[output]: System output in watts.")
+    #     print("Note that all values before [output] are for a simulated theoretical 1m² panel.")
+    #     print("-------------------------------------------------------------------------------------------------------")
 
     # this line saves the results as a csv file
-    if config.save_csv:
-        print("-------------------------------------------------------------------------------------------------------")
-        print("Output table csv exporting is turned on in the config.py file")
-        filename = config.save_directory+ config.site_name + str(datetime.date.today()) + ".csv"
-        data_fmi.to_csv(filename,float_format='%.2f')
-        print("Saved csv as: " + filename)
-        print("-------------------------------------------------------------------------------------------------------")
+    # if config.save_csv:
+    #     print("-------------------------------------------------------------------------------------------------------")
+    #     print("Output table csv exporting is turned on in the config.py file")
+    #     filename = config.save_directory+ config.site_name + str(datetime.date.today()) + ".csv"
+    #     data_fmi.to_csv(filename,float_format='%.2f')
+    #     print("Saved csv as: " + filename)
+    #     print("-------------------------------------------------------------------------------------------------------")
 
 
-    plotter.plot_fmi_pvlib_mono(data_fmi, data_pvlib)
+    # plotter.plot_fmi_pvlib_mono(data_fmi, data_pvlib)
 
 
 
