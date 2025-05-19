@@ -232,20 +232,34 @@ def get_file_data():
     data_file.index = pd.to_datetime(data_file.index)
 
     # step 2. project irradiance components to plane of array:
-    data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
+    if not {"dni_poa", "dhi_poa", "ghi_poa"}.issubset(data_file.columns):
+        data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
+    else:
+        print("Step 2. already done!")
 
     # step 3. simulate how much of irradiance components is absorbed:
-    data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
+    if not {"dni_rc", "dhi_rc", "ghi_rc"}.issubset(data_file.columns): 
+        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
+    else:
+        print("Step 3. already done!")
 
     # step 4. compute sum of reflection-corrected components:
-    data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
+    if "poa_ref_cor" not in data_file.columns:
+        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
+    else:
+        print("Step 4. already done!")
     
     # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation if it's not measured:
     if "module_temp" not in data_file.columns:
         data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
+    else:
+        print("Step 5. already done!")
 
     # step 6. estimate power output
-    data_file = helpers.output_estimator.add_output_to_df(data_file)
+    if "output" not in data_file.columns:
+        data_file = helpers.output_estimator.add_output_to_df(data_file)
+    else:
+        print("Step 6. already done!")
 
     return data_file
 
