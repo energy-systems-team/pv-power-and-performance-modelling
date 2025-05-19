@@ -34,7 +34,8 @@ combined_processing_of_data()
 -used get_fmi_data and get_pvlib_data to generate dataframes. Plots the data with plotter monoplot.
 plot shows power(W) and energy(kWh) values for each day.
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 
 def print_full(x: pandas.DataFrame):
@@ -222,10 +223,7 @@ def get_pvlib_data(day_range=3, data_fmi=None):
 
 def get_file_data():
     """
-    This function shows the steps used for generating power output data with pvlib. Also returns the power output.
-    PVlib is fully simulated, no restrictions on day range.
-    :param day_range: Day count, 1 returns only this day, 3 returns this day and the 2 following days.
-    :param data_fmi: If fmi df is given here, it will be used as weather data donor df
+    This function shows the steps used for generating power output data from file provided by user. Also returns the power output.
     :return: Power output dataframe
     """
     # step 1. read the file
@@ -233,18 +231,18 @@ def get_file_data():
     data_file.set_index('utctime', inplace=True)
     data_file.index = pd.to_datetime(data_file.index)
 
-    if config.calculate_irradiance_components:
-        # step 2. project irradiance components to plane of array:
-        data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
+    # step 2. project irradiance components to plane of array:
+    data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
 
-        # step 3. simulate how much of irradiance components is absorbed:
-        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
+    # step 3. simulate how much of irradiance components is absorbed:
+    data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
 
-        # step 4. compute sum of reflection-corrected components:
-        data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
+    # step 4. compute sum of reflection-corrected components:
+    data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
     
-    # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation
-    data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
+    # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation if it's not measured:
+    if "module_temp" not in data_file.columns:
+        data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
 
     # step 6. estimate power output
     data_file = helpers.output_estimator.add_output_to_df(data_file)

@@ -2,7 +2,8 @@
 Config file, used for storing parameters which are installation specific and fixed. Geolocation, panel angles, timezone
 and data resolution belong here. Variables in this file should be expected to stay unmodified during a simulation.
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 
 ##### Plotting parameters

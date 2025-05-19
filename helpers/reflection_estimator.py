@@ -5,7 +5,8 @@ reflections.
 Equations are based on Martin & Ruiz 2001 paper
 "Calculation of the PV modules angular losses under field conditions by means of an analytical model"
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 
 import math
@@ -52,7 +53,8 @@ def components_to_corrected_poa(DNI_component: float, DHI_component: float, GHI_
 
 def add_reflection_corrected_poa_to_df(df: pandas.DataFrame) -> pandas.DataFrame:
     """
-    Adds reflection corrected POA value to dataframe with name "poa_ref_cor"
+    Adds reflection corrected POA value to dataframe with name "poa_ref_cor".
+    NOTE curretnly calculates reflection corrected POA from corrected dni, dhi, and ghi components and not from POA.
     :param df:
     :return:
     """

@@ -7,7 +7,8 @@ POA: Plane of array irradiance, the total amount of radiation which reaches the 
 the sum of poa projected dhi, dni and ghi.
 POA = "dhi_poa" + "dni_poa" + "ghi_poa"
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 
 import math
@@ -57,8 +58,9 @@ def irradiance_df_to_poa_df(irradiance_df:pandas.DataFrame)-> pandas.DataFrame:
     else:
         irradiance_df["ghi_poa"] = __project_ghi_to_panel_surface(irradiance_df["ghi"])
 
-    # adding the sum of projections to df as poa
-    irradiance_df["poa"] = irradiance_df["dhi_poa"] + irradiance_df["dni_poa"] + irradiance_df["ghi_poa"]
+    # adding the sum of projections to df as poa if it's not measured in the original data
+        if "poa" not in irradiance_df.columns:
+            irradiance_df["poa"] = irradiance_df["dhi_poa"] + irradiance_df["dni_poa"] + irradiance_df["ghi_poa"]
 
     return irradiance_df
 
