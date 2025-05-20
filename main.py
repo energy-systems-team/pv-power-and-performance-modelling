@@ -262,7 +262,7 @@ def get_file_data():
         print("Step 6. already done!")
 
     # step 7. estimate power output
-    if "output" not in data_file.columns:
+    if not {"huld_general", "pvwatts"}.issubset(data_file.columns):
         data_file = helpers.output_estimator.add_output_to_df(data_file)
     else:
         print("Step 7. already done!")

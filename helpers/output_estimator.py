@@ -4,7 +4,8 @@ Required input is a dataframe with columns which contain absorbed radiation and 
 These columns are named "poa_ref_cor"(plane of array irradiance with reflection corrections) and
 "module_temp" for PV module temperature.
 
-Author: TimoSalola (Timo Salola).
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 
 
@@ -43,25 +44,29 @@ def add_output_to_df(df: pandas.DataFrame)-> pandas.DataFrame:
 
     if "poa_ref_cor" not in df.columns:
         print("column poa_ref_cor not found in dataframe, output can not be simulated")
-    if "module_temp" not in df.columns:
+    elif "module_temp" not in df.columns:
         print("module temperature variable \"module_temp\" not found in dataframe")
+    elif "cell_temp" not in df.columns:
+        print("cell temperature variable \"cell_temp\" not found in dataframe")
+    else:
+        # filtering negative values out
+        df.loc[df['poa_ref_cor'] < 0, 'poa_ref_cor'] = 0
 
+        # this line makes sure the output estimation is not called when per w² radiation is below 0.1W. If the radiation is
+        # this low, the system would not produce any power and values of 0.0 cause issues as the output model contains
+        # logarithms
+        df['huld_general'] = df.apply(lambda row: 0.0 if row['poa_ref_cor'] < 0.1 else __estimate_huld_general(row['poa_ref_cor'], row['module_temp']), axis=1 )
+        # filling nans
+        df['huld_general'] = df['huld_general'].fillna(0.0)
 
-    # filtering negative values out
-    df.loc[df['poa_ref_cor'] < 0, 'poa_ref_cor'] = 0
-
-    # this line makes sure the output estimation is not called when per w² radiation is below 0.1W. If the radiation is
-    # this low, the system would not produce any power and values of 0.0 cause issues as the output model contains
-    # logarithms
-    df['output'] = df.apply(lambda row: 0.0 if row['poa_ref_cor'] < 0.1 else __estimate_output(row['poa_ref_cor'], row['module_temp']),axis=1 )
-
-    # filling nans
-    df['output'] = df['output'].fillna(0.0)
+        df['pvwatts'] = df.apply(lambda row: 0.0 if row['poa_ref_cor'] < 0.1 else __estimate_pvwatts(row['poa_ref_cor'], row['cell_temp']), axis=1 )
+        # filling nans
+        df['pvwatts'] = df['pvwatts'].fillna(0.0)
 
     return df
 
 
-def __estimate_output(absorbed_radiation: float, panel_temp: float)-> float:
+def __estimate_huld_general(absorbed_radiation: float, panel_temp: float)-> float:
 
     """
     Huld 2010 model
@@ -132,6 +137,22 @@ def __estimate_output(absorbed_radiation: float, panel_temp: float)-> float:
     output = rated_power*nrad*efficiency
 
 
+
+    return output
+
+
+def __estimate_pvwatts(absorbed_radiation: float, cell_temp: float, temp_coef = -0.004)-> float:
+
+    """
+
+    :param absorbed_radiation: Solar irradiance absorbed by m² of solar panel surface.
+    :param cell_temp: Estimated cell temperature.
+    :return: Estimated system output in watts.
+    """
+
+    c = 1 + temp_coef * (cell_temp - 25.0)
+    rated_power = config.rated_power * 1000.0
+    output = c * rated_power * absorbed_radiation / 1000.0
 
     return output
 
