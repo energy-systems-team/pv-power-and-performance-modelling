@@ -130,6 +130,7 @@ def add_wind_and_temp_to_df1_from_df2(df1: pandas.DataFrame, df2: pandas.DataFra
     weather_df = df2[["time", "wind", "T"]]
 
     # joining weather df to df1
+    #df1 = pandas.concat([df1, weather_df], axis=1)
     df1 = df1.merge(weather_df, on="time", how="outer")
 
     # filling in nan values for wind
@@ -137,6 +138,8 @@ def add_wind_and_temp_to_df1_from_df2(df1: pandas.DataFrame, df2: pandas.DataFra
 
     # filling in nan values for temp
     df1['T'] = df1['T'].interpolate(limit_direction='both')
+
+    df1.set_index("time", inplace=True)
 
     return df1
 

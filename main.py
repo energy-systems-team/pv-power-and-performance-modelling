@@ -126,7 +126,7 @@ def full_processing_of_pvlib_data():
     plotter.add_label_x("Time")
     plotter.add_label_y("Output(W)")
     plotter.add_title("Simulated solar PV system output")
-    plotter.plot_curve(data["time"], data["output"], label="Output(W)")
+    plotter.plot_curve(data["time"], data["huld_general"], label="Output(W)")
     plotter.plot_kwh_labels(data)
     plotter.show_legend()
     plotter.show_plot()
@@ -165,7 +165,10 @@ def get_fmi_data(day_range=3):
     # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation
     data = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data)
 
-    # step 6. estimate power output
+    # step 6. estimate cell temperature based on wind speed, air temperature and absorbed radiation
+    data = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data)
+
+    # step 7. estimate power output
     data = helpers.output_estimator.add_output_to_df(data)
 
     print(f"data_fmi: {data.columns}")
@@ -176,7 +179,7 @@ def get_fmi_data(day_range=3):
     return data
 
 
-def get_pvlib_data(day_range=3, data_fmi=None):
+def get_pvlib_data(day_range=3, data_fmi=None, data_file=None):
     """
     This function shows the steps used for generating power output data with pvlib. Also returns the power output.
     PVlib is fully simulated, no restrictions on day range.
@@ -184,38 +187,93 @@ def get_pvlib_data(day_range=3, data_fmi=None):
     :param data_fmi: If fmi df is given here, it will be used as weather data donor df
     :return: Power output dataframe
     """
-    # date for simulation:
-    today = datetime.date.today()
-    date_start = datetime.datetime(today.year, today.month, today.day)
+    if data_fmi is not None:
+        print("data_fmi provided")
+        today = datetime.date.today()
+        date_start = datetime.datetime(today.year, today.month, today.day)
+        data_pvlib = solar_irradiance_estimator.get_solar_irradiance(date_start, day_count=day_range, model="pvlib")
+    elif data_file is not None:
+        print("data_file provided")
+        try:
+            data_pvlib = pd.read_csv(config.data_path + "/pvlib_data.csv", sep=config.data_file_sep)
+            data_pvlib.set_index("time", inplace=True)
+            data_pvlib.index = pd.to_datetime(data_pvlib.index, utc=True)
 
-    data_pvlib = solar_irradiance_estimator.get_solar_irradiance(date_start, day_count=day_range, model="pvlib")
+            print("pvlib data read from file")
+
+            return data_pvlib
+        except Exception as e:
+            print(e)
+            print("pvlib data is calculated")
+            date_start = data_file.index[0]
+            date_end = data_file.index[-1]
+            day_range = abs((date_end - date_start).days)
+            data_pvlib = solar_irradiance_estimator.get_solar_irradiance(date_start, day_count=day_range, model="pvlib")
+            data_pvlib.set_index("time", inplace=True)
+            # print(data_pvlib.head(2))
+    else:
+        print("No data provided.")
+    
+    # except:
+    #     # date for simulation:
+    #     if data_file is not None:
+    #         date_start = data_file.index[0]
+    #         date_end = data_file.index[-1]
+    #         day_range = abs((date_end - date_start).days)
+    #     else:
+    #         today = datetime.date.today()
+    #         date_start = datetime.datetime(today.year, today.month, today.day)
+    
+    data_pvlib.index = pd.to_datetime(data_pvlib.index, utc=True)
+
+    # print(f"data_pvlib orign: {data_pvlib.head(2)}")
 
     # step 2. project irradiance components to plane of array:
     data_pvlib = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_pvlib)
+    
+    # print(f"data_pvlib step 2: {data_pvlib.head(2)}")
 
     # step 3. simulate how much of irradiance components is absorbed:
     data_pvlib = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_pvlib)
 
+    # print(f"data_pvlib step 3: {data_pvlib.head(2)}")
+
     # step 4. compute sum of reflection-corrected components:
     data_pvlib = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_pvlib)
+
+    # print(f"data_pvlib step 4: {data_pvlib.head(2)}")
 
     # step 4.1. adding wind and air speed to dataframe
     if data_fmi is not None:
         # getting data from fmi dataframe if one was given
         data_pvlib = panel_temperature_estimator.add_wind_and_temp_to_df1_from_df2(data_pvlib, data_fmi)
+    elif data_file is not None:
+        # getting data from file dataframe if one was given
+        data_pvlib = panel_temperature_estimator.add_wind_and_temp_to_df1_from_df2(data_pvlib, data_file)
     else:
         # using dummy values if no df was given
         data_pvlib = helpers.panel_temperature_estimator.add_dummy_wind_and_temp(data_pvlib, config.wind_speed, config.air_temp)
+    
+    # print(f"data_pvlib step 4.1: {data_pvlib.head(2)}")
 
     # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation
     data_pvlib = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_pvlib)
 
-    # step 6. estimate power output
+    # print(f"data_pvlib step 5: {data_pvlib.head(2)}")
+
+    # step 6. estimate cell temperature
+    data_pvlib = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data_pvlib)
+
+    # print(f"data_pvlib step 6: {data_pvlib.head(2)}")
+
+    # step 7. estimate power output
     data_pvlib = helpers.output_estimator.add_output_to_df(data_pvlib)
+
+    # print(f"data_pvlib step 7: {data_pvlib.head(2)}")
 
     data_pvlib = data_pvlib.dropna()
 
-    print(f"data_pvlib: {data_pvlib.columns}")
+    # print(f"data_pvlib: {data_pvlib.head(2)}")
     print("-------------------")
 
     return data_pvlib
@@ -229,7 +287,8 @@ def get_file_data():
     # step 1. read the file
     data_file = pd.read_csv(config.data_path + "/" + config.read_file_name, sep=config.data_file_sep)
     data_file.set_index('utctime', inplace=True)
-    data_file.index = pd.to_datetime(data_file.index)
+    data_file.index = pd.to_datetime(data_file.index, utc=True)
+    data_file["time"] = pd.to_datetime(data_file.index, utc=True)
 
     # step 2. project irradiance components to plane of array:
     if not {"dni_poa", "dhi_poa", "ghi_poa"}.issubset(data_file.columns):
@@ -278,22 +337,24 @@ def combined_processing_of_data():
 
     day_range = 3
 
+    # Reading file containing historical weather and PV data
+    data_file = get_file_data()
+    # data_file = None
+
     # print("Simulating clear sky and weather model based PV generation for the next " + str(day_range) +" days.")
     # fetching fmi data and generating solar pv output df
 
-    #data_fmi = get_fmi_data(day_range)
+    # data_fmi = get_fmi_data(day_range)
+    data_fmi = None
 
     # generating pvlib irradiance values and clear sky pv dataframe, passing fmi data to pvlib generator functions
     # for wind and air temp transfer
-    #data_pvlib = get_pvlib_data(day_range, data_fmi)
-
-    # Reading file containing historical weather and PV data
-    data_file = get_file_data()
-
-    print(data_file.columns)
+    data_pvlib = get_pvlib_data(day_range=day_range, data_fmi=data_fmi, data_file=data_file)
 
     if config.save_data_csv:
         data_file.to_csv(config.data_path + "/" + config.write_file_name, sep=config.data_file_sep)
+        if data_fmi is None: # Save pvlib data only if FMI forecast is not made.
+            data_pvlib.to_csv(config.data_path + "/pvlib_data.csv", sep=config.data_file_sep)
     # this line prints the full results into console/terminal
 
     # if config.console_print:
@@ -335,8 +396,24 @@ def combined_processing_of_data():
     #     print("Saved csv as: " + filename)
     #     print("-------------------------------------------------------------------------------------------------------")
 
+    #  print(f"describe data_pvlib: {data_pvlib.describe().T}")
+    #  print(data_pvlib.head(1))
+    #  print(data_pvlib.index[0])
+    #  print()
+    #  if data_fmi is not None:
+    #      print(f"describe data_fmi: {data_fmi.describe().T}")
+    #      print(data_fmi.head(1))
+    #      print()
+    #  if data_file is not None:
+    #      print(f"describe data_file: {data_file.describe().T}")
+    #      print(data_file.head(1))
+    #      print()
 
-    # plotter.plot_fmi_pvlib_mono(data_fmi, data_pvlib)
+    plotter.plot_fmi_pvlib_mono(data_pvlib=data_pvlib, 
+                                data_fmi=data_fmi, 
+                                data_file=data_file, 
+                                start_date="2019-06-02", 
+                                day_range=2)
 
 
 

@@ -1,14 +1,15 @@
 """
 Functions for generating and saving plots.
 
-Author: Timo Salola.
+Original author: TimoSalola (Timo Salola).
+Edited by: Väinö Anttalainen
 """
 import matplotlib.pyplot
 import matplotlib.dates
 import pandas
 from matplotlib import dates
 import datetime
-from datetime import datetime
+#from datetime import datetime
 from matplotlib.dates import DateFormatter
 import config
 import pytz
@@ -112,7 +113,7 @@ def plot_kwh_labels(df, y_offset=0):
     df2["output_kwh"] = df2["output"] / 1000 * (60 / config.data_resolution)
 
     for index, row in df2.iterrows():
-        x_value = datetime(index.year, index.month, index.day, 8)
+        x_value = datetime.datetime(index.year, index.month, index.day, 8)
         output = round(row["output_kwh"], -1)
         text = str(output) + " kWh"
         matplotlib.pyplot.text(x_value, y_offset, text)
@@ -124,7 +125,7 @@ def default_labels_and_title(date):
     add_label_x("Time")
 
 
-def plot_fmi_pvlib_mono(data_fmi, data_pvlib):
+def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date="", day_range=-1):
     """
     Generates a plot from 2 dataframes with time and output columns.
     :param data_fmi:
@@ -135,37 +136,58 @@ def plot_fmi_pvlib_mono(data_fmi, data_pvlib):
     # Timezone of plots could be adjusted to local timezone here. Currently this does not work and thus plots are in UTC
     finnish_time = pytz.timezone("Europe/Helsinki")
 
-    data_pvlib["time"] = data_pvlib["time"].dt.tz_convert(finnish_time)
-    data_fmi["time"] = data_fmi["time"].dt.tz_convert(finnish_time)
+    # data_pvlib["time"] = data_pvlib["time"].dt.tz_convert(finnish_time)
+    # data_fmi["time"] = data_fmi["time"].dt.tz_convert(finnish_time)
+
+    if data_fmi is not None:
+        # removing leading and trailing power output is zero values from fmi open data based energy generation data
+        # Find the index of the first non-zero value
+        start_index = data_fmi['huld_general'].ne(0).idxmax()
+    
+        # Find the index of the last non-zero value
+        end_index = data_fmi['huld_general'].ne(0)[::-1].idxmax()
+    
+        # Extract the section of the DataFrame without leading and trailing zeros
+        data = data_fmi.loc[start_index:end_index]
+
+        # generate timestamp string for file name
+        date_for_simulation = data.index[0].date()
+        now = datetime.datetime.now(datetime.UTC)
+        timestamp = str(date_for_simulation) + " " + str(now.time())[0:5]
+
+    elif data_file is not None:
+        if start_date=="":
+            start_date = data_file.index[0]
+        else:
+            start_date = pandas.to_datetime(start_date, utc=True)
+
+        if day_range == -1:
+            end_date = data_file.index[-1]
+        else:
+            end_date = start_date + datetime.timedelta(days=day_range)
+
+        data = data_file.loc[(data_file.index >= start_date) & (data_file.index < end_date), :]
+        data_pvlib = data_pvlib.loc[(data_pvlib.index >= start_date) & (data_pvlib.index < end_date), :]
+
+        # generate timestamp string for file name
+        timestamp = str(start_date)
 
     f, (a0, a1) = matplotlib.pyplot.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(12, 6))
 
     # plotting pvlib and fmi data
-    a0.plot(data_pvlib["time"], data_pvlib["output"], label="Theoretical clear sky generation", c="#6ec8fa")
+    a0.plot(data_pvlib.index, data_pvlib["huld_general"], label="Theoretical clear sky generation", c="#6ec8fa")
 
-    # removing leading and trailing power output is zero values from fmi open data based energy generation data
-    # Find the index of the first non-zero value
-    start_index = data_fmi['output'].ne(0).idxmax()
 
-    # Find the index of the last non-zero value
-    end_index = data_fmi['output'].ne(0)[::-1].idxmax()
-
-    # Extract the section of the DataFrame without leading and trailing zeros
-    data_fmi = data_fmi.loc[start_index:end_index]
-
-    a0.plot(data_fmi["time"], data_fmi["output"],
-            label="Weather model based generation", c="#303193")
+    a0.plot(data.index, data["huld_general"],
+            label="General Huld model based generation", c="#303193")
+    a0.plot(data.index, data["pvwatts"],
+            label="PVWatts model based generation")
 
     # adding legend
     a0.legend(loc='upper right')
 
-    #reading date from fmi data
-    date_for_simulation = data_fmi.index[0].date()
-    now = datetime.utcnow()
-    timestamp = str(date_for_simulation) + " " + str(now.time())[0:5]
-
     # adding titles for both plots
-    a0.set_title('Power generation "' + config.site_name + "\" " + timestamp + "UTC")
+    # a0.set_title('Power generation "' + config.site_name + "\" " + timestamp + "UTC")
     a1.set_title('Energy generation')
 
     # plot 0 labels
@@ -178,40 +200,46 @@ def plot_fmi_pvlib_mono(data_fmi, data_pvlib):
     # calculating kwh sums for pvlib
     pvlib_x, pvlib_y = __get_dayily_power_sums(data_pvlib, config.data_resolution) # pvlib resolution can be any
 
-    # calculating khw sums for fmi
-    fmi_x, fmi_y = __get_dayily_power_sums(data_fmi, 60) # fmi open data only gives 60min resolution data
+    # calculating khw sums for the other data
+    if data_fmi is not None:
+        data_x, data_y = __get_dayily_power_sums(data, 60) # fmi open data only gives 60min resolution data
+    else:
+        data_x, data_y = __get_dayily_power_sums(data, config.data_resolution)
+
 
     # plotting kwh sums on second plot
     a1.bar(pvlib_x, pvlib_y, color="#6ec8fa")
-    a1.bar(fmi_x, fmi_y, color="#303193")
+    a1.bar(data_x, data_y, color="#303193")
 
     # adding simulation runtime as vertical line
-    v_line_max = max(max(data_pvlib["output"]), max(data_fmi["output"]))
-    a0.plot([now, now], [0, v_line_max], color="silver", linestyle='--')
+    if data_fmi is not None:
+        now = datetime.datetime.now(datetime.UTC)
+        v_line_max = max(max(data_pvlib["huld_general"]), max(data["huld_general"]))
+        a0.plot([now, now], [0, v_line_max], color="silver", linestyle='--')
 
 
     # adding xxkWh (xx%) text to second plot
-    for i in range(len(fmi_x)):
+    for i in range(len(data_x)):
         pvlib_kwh = pvlib_y[i]
-        fmi_kwh = fmi_y[i]
-        fraction_kwh = fmi_kwh / pvlib_kwh
+        data_kwh = data_y[i]
+        fraction_kwh = data_kwh / pvlib_kwh
         percents = round(fraction_kwh * 100)
-        txt = str(fmi_y[i]) + "kWh\n(" + str(percents) + "%)"
+        txt = str(data_y[i]) + "kWh\n(" + str(percents) + "%)"
 
         # this mess here should make sure that kwh numbers do not overlap in bar charts. This shifts
         # text in y-axis if texts are too close
         if i == 0:
-            a1.text(fmi_x[i], fmi_y[i] / 2, txt, ha="center", backgroundcolor="#FFFFFFd5")
+            a1.text(data_x[i], data_y[i] / 2, txt, ha="center", backgroundcolor="#FFFFFFd5")
         if i > 0:
-            last_y_position = fmi_y[i - 1] / 2
-            new_y_position = fmi_y[i] / 2
+            last_y_position = data_y[i - 1] / 2
+            new_y_position = data_y[i] / 2
 
             if last_y_position < new_y_position < last_y_position * 1.2:
                 new_y_position = last_y_position * 1.2
             if last_y_position > new_y_position > last_y_position * 0.8:
                 new_y_position = last_y_position * 0.8
 
-            a1.text(fmi_x[i], new_y_position, txt, ha="center", backgroundcolor="#FFFFFFd5")
+            a1.text(data_x[i], new_y_position, txt, ha="center", backgroundcolor="#FFFFFFd5")
 
     # formatting plot 1 date axis
     a0.xaxis.set_major_formatter(DateFormatter("%m-%d"))
@@ -248,22 +276,25 @@ def plot_fmi_pvlib_mono(data_fmi, data_pvlib):
 
 
 def __get_dayily_power_sums(data, resolution=config.data_resolution):
-    df = data[["time", "output"]].copy()
+    #  df = data[["time", "huld_general"]].copy()
+#  
+    #  df["date"] = pandas.to_datetime(df["time"]).dt.date
 
-    df["date"] = pandas.to_datetime(df["time"]).dt.date
+    df = data[["huld_general"]].copy()
+    df["date"] = pandas.to_datetime(df.index).date
 
-    df = df.drop("time", axis=1)
+    #  df = df.drop("time", axis=1)
     df = df.groupby(["date"]).sum()
 
-    df["output_kwh"] = (df["output"] / 1000) / (60 / resolution)
+    df["huld_general_kwh"] = (df["huld_general"] / 1000) / (60 / resolution)
 
     xvalues = []
     yvalues = []
 
     for index, row in df.iterrows():
-        x_value = datetime(index.year, index.month, index.day).date()
+        x_value = datetime.datetime(index.year, index.month, index.day).date()
         # x_value = data(index.year, index.month, index.day)
-        output = round(row["output_kwh"], 1)
+        output = round(row["huld_general_kwh"], 1)
 
         # avoiding days with zero power,
         if output > 0:
