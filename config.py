@@ -38,9 +38,9 @@ azimuth_helsinki = 135
 azimuth_kuopio = 217
 azimuth_turku = 180
 
-rated_power_kuopio = 20.28
-rated_power_helsinki = 21
-rated_power_turku = 4.5
+rated_power_kuopio = 20.28  # [kWp]
+rated_power_helsinki = 21  # [kWp]
+rated_power_turku = 4.5  # [kWp]
 
 
 #### SIMULATED INSTALLATION PARAMETERS BELOW:
