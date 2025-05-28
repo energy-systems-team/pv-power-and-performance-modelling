@@ -30,9 +30,9 @@ def IEC(data, p_rated):
 
     Returns: Filtering mask (Pandas Series object)
     """
-    mask = (data.poa < 1500) & (data.poa > -6) & (data.t_air > -30) & (data.t_air < 50) & \
-           (data.wind_speed > 0) & (data.ac_power > -0.01 * p_rated) & \
-           (data.ac_power < 1.02 * p_rated)
+    mask = (data['poa'] < 1500) & (data['poa'] > -6) & (data['T'] > -30) & (data['T'] < 50) & \
+           (data['wind'] > 0) & (data['pv_inv_out'] > -0.01 * p_rated) & \
+           (data['pv_inv_out'] < 1.02 * p_rated)
     
     return mask
 
@@ -58,7 +58,7 @@ def nighttime(data):
     Returns: Filtering mask (Pandas Series object)
     """
     
-    mask = data.poa.values < 5
+    mask = data['poa'] < 5
     return mask
 
 
@@ -134,7 +134,7 @@ def clear_sky(data, latitude, longitude, altitude, threshold=0.2):
     
     # clearsky function returns a dataframe with clear-sky GHI values
     clear_sky = pvlib.clearsky.haurwitz(spa.apparent_zenith)
-    cs_ghi = clear_sky.ghi.values  # Clearsky ghi values
+    cs_ghi = clear_sky['ghi'].values  # Clearsky ghi values
     
     # Calculate clearsky-index
     csi = data.ghi / cs_ghi
