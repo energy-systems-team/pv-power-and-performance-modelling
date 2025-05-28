@@ -12,47 +12,6 @@ site_name = "output_example"
 save_directory = "output/"
 save_csv = False #value= [True] or [False] this variable toggles csv file saving on or off
 console_print = False #value= [True] or [False] this variable toggles console printing of the full output table on or off
-save_data_csv = True
-calculate_irradiance_components = True
-
-#### SIMULATED INSTALLATION PARAMETERS BELOW:
-# coordinates
-latitude = 60.45
-longitude = 22.30
-
-# panel angles
-tilt = 15 # degrees. Panel flat on the roof would have tilt of 0. Wall mounted panels have tilt of 90.
-azimuth = 180 # degrees, north is 0 degrees, east 90. Clockwise rotation
-
-# rated installation power in kW, PV output at standard testing conditions
-rated_power = 4.5 # unit kW
-
-# ground albedo near solar panels, 0.25 is PVlib default. Has to be in range [0,1], typical values [0.1, 0.4]
-# grass is 0.25, snow 0.8, worn asphalt 0.12. Values can be found from wikipedia https://en.wikipedia.org/wiki/Albedo
-albedo = 0.151
-
-# module elevation, measured from ground
-module_elevation = 8 # unit meters
-
-# dummy wind speed(meter per second) value, this will be used if wind speed from fmi open is not used
-wind_speed = 2
-
-# air temp in Celsius, this will be used if temp from fmi open is not used
-air_temp = 20
-
-
-
-
-
-#### OTHER PARAMETERS
-
-# "Europe/Helsinki" should take summer/winter time into account, "GTM" is another useful timezone
-# timezone is currently not utilized as it should due to plotting issues
-timezone = "UTC"
-
-# data resolution, how many minutes between measurements. Recommending values 60, 30, 15, 10, 5, 1
-# will interpolate if resolution is higher than 60(30 or 15 etc.) as 60 is what fmi open data is capable of.
-data_resolution = 5
 
 ########### PARAMETERS FOR FMI INSTALLATIONS BELOW:
 
@@ -84,6 +43,41 @@ rated_power_helsinki = 21
 rated_power_turku = 4.5
 
 
+#### SIMULATED INSTALLATION PARAMETERS BELOW:
+# coordinates
+latitude = latitude_helsinki
+longitude = longitude_helsinki
+
+# panel angles
+tilt = 15 # degrees. Panel flat on the roof would have tilt of 0. Wall mounted panels have tilt of 90.
+azimuth = azimuth_helsinki # degrees, north is 0 degrees, east 90. Clockwise rotation
+
+# rated installation power in kW, PV output at standard testing conditions
+rated_power = rated_power_helsinki # unit kW
+
+# ground albedo near solar panels, 0.25 is PVlib default. Has to be in range [0,1], typical values [0.1, 0.4]
+# grass is 0.25, snow 0.8, worn asphalt 0.12. Values can be found from wikipedia https://en.wikipedia.org/wiki/Albedo
+albedo = 0.151
+
+# module elevation, measured from ground
+module_elevation = 8 # unit meters
+
+# dummy wind speed(meter per second) value, this will be used if wind speed from fmi open is not used
+wind_speed = 2
+
+# air temp in Celsius, this will be used if temp from fmi open is not used
+air_temp = 20
+
+#### OTHER PARAMETERS
+
+# "Europe/Helsinki" should take summer/winter time into account, "GTM" is another useful timezone
+# timezone is currently not utilized as it should due to plotting issues
+timezone = "UTC"
+
+# data resolution, how many minutes between measurements. Recommending values 60, 30, 15, 10, 5, 1
+# will interpolate if resolution is higher than 60(30 or 15 etc.) as 60 is what fmi open data is capable of.
+data_resolution = 1
+
 # functions like this can be used for easily running the code for multiple installations
 def set_params_helsinki():
     latitude = latitude_helsinki
@@ -112,6 +106,119 @@ def set_params_turku():
 
 ########### PARAMETERS FOR DATA FILES BELOW:
 data_path = "data"
-read_file_name = "turku_preprocessed.csv"
-write_file_name = "turku_preprocessed_2.csv"
+read_file_name = "b2share/FMI_Helsinki_PV.csv"
+# read_file_name = "FMI_Kuopio_PV_2.csv"
+write_file_name = "FMI_Helsinki_PV_2.csv"
 data_file_sep = ";"
+save_data_csv = True
+
+# Header length tells how many rows of the file are metatext
+header_length_helsinki = 67
+header_length_kuopio = 67
+header_length_sodankyla = 93
+
+col_name_dict_helsinki = {
+    'fmisid': 'id',
+    'stationname': 'stationname',
+    'utctime': 'utctime',
+    'GLOB_PT1M_AVG': 'ghi',
+    'DIFF_PT1M_AVG': 'dhi',
+    'DIR_PT1M_AVG': 'dni',
+    'GLOBA_PT1M_AVG(:31)': 'poa',
+    'TTECH_PT1M_AVG(:31)': 't_roof',
+    'TTECH_PT1M_AVG(:32)': 'module_temp_1',
+    'TTECH_PT1M_AVG(:33)': 'module_temp_2',
+    'P0_PT1M_AVG': 'pressure',
+    'TA_PT1M_AVG': 'T',
+    'RH_PT1M_AVG': 'relative_humid',
+    'CLA_PT1M_ACC': 'cloud_coverage',
+    'WS_PT10M_AVG': 'wind',
+    'WD_PT10M_AVG': 'wind_dir',
+    'PRA_PT1H_ACC': 'precipitation',
+    'SND_P1D_INSTANT': 'snow_ground',
+    'pv_inv_out': 'pv_inv_out',
+    'pv_inv_in': 'power',
+    'pv_str_1': 'pv_str_1',
+    'pv_str_2': 'pv_str_2',
+    'dataQC': 'dataQC',
+    'vis_SnoP': 'snow',
+    'Viss_day': 'viss_day'
+}
+
+col_name_dict_kuopio = {
+    'fmisid': 'id',
+    'stationname': 'stationname',
+    'utctime': 'utctime',
+    'GLOB_PT1M_AVG': 'ghi',
+    'DIFF_PT1M_AVG': 'dhi',
+    'DIR_PT1M_AVG': 'dni',
+    'GLOBA_PT1M_AVG(:31)': 'poa',
+    'TA_PT1M_AVG(:31)': 't_roof',
+    'TTECH_PT1M_AVG(:32)': 'module_temp_1',
+    'TTECH_PT1M_AVG(:33)': 'module_temp_2',
+    'P0_PT1M_AVG': 'pressure',
+    'TA_PT1M_AVG': 'T',
+    'RH_PT1M_AVG': 'relative_humid',
+    'CLA_PT1M_ACC': 'cloud_coverage',
+    'WS_PT10M_AVG': 'wind',
+    'WD_PT10M_AVG': 'wind_dir',
+    'PRA_PT1H_ACC': 'precipitation',
+    'SND_P1D_INSTANT': 'snow_ground',
+    'pv_inv_out': 'pv_inv_out',
+    'pv_inv_in': 'power',
+    'pv_str_1': 'pv_str_1',
+    'pv_str_2': 'pv_str_2',
+    'dataQC': 'dataQC',
+    'vis_SnoP': 'snow',
+    'Viss_day': 'viss_day'
+}
+
+col_name_dict_sodankyla_20 = {
+    'fmisid': 'id',
+    'stationname': 'stationname',
+    'utctime': 'utctime',
+    'GLOB_PT1M_AVG': 'ghi',
+    'DIFF_PT1M_AVG': 'dhi',
+    'DIR_PT1M_AVG': 'dni',
+    #'GLOBA_PT1M_AVG(:31)': 'poa', # POA is not measured here
+    'TA_PT1M_AVG(:101)': 't_roof',
+    'TTECH_PT1M_AVG(:102)': 'module_temp',
+    'P0_PT1M_AVG': 'pressure',
+    'TA_PT1M_AVG': 'T',
+    'RH_PT1M_AVG': 'relative_humid',
+    'CLA_PT1M_ACC': 'cloud_coverage',
+    'WS_PT10M_AVG': 'wind',
+    'WD_PT10M_AVG': 'wind_dir',
+    'PRA_PT1H_ACC': 'precipitation',
+    'SND_P1D_INSTANT': 'snow_ground',
+    'pv_inv_out': 'pv_inv_out',
+    'DC_P[W]': 'power',
+    'dataQC': 'dataQC',
+    'vis_SnoP': 'snow',
+    'Viss_day': 'viss_day'
+}
+
+col_name_dict_sodankyla_90 = {
+    'fmisid': 'id',
+    'stationname': 'stationname',
+    'utctime': 'utctime',
+    'GLOB_PT1M_AVG': 'ghi',
+    'DIFF_PT1M_AVG': 'dhi',
+    'DIR_PT1M_AVG': 'dni',
+    'GLOBA_PT1M_AVG(:101)': 'poa',
+    'TA_PT1M_AVG(:101)': 't_roof',
+    'TTECH_PT1M_AVG(:103)': 'module_temp',
+    'P0_PT1M_AVG': 'pressure',
+    'TA_PT1M_AVG': 'T',
+    'RH_PT1M_AVG': 'relative_humid',
+    'CLA_PT1M_ACC': 'cloud_coverage',
+    'WS_PT10M_AVG': 'wind',
+    'WD_PT10M_AVG': 'wind_dir',
+    'PRA_PT1H_ACC': 'precipitation',
+    'SND_P1D_INSTANT': 'snow_ground',
+    'pv_inv_out': 'pv_inv_out',
+    'DC_P[W]': 'power',
+    'dataQC': 'dataQC',
+    'vis_SnoP': 'snow',
+    'Viss_day': 'viss_day'
+}

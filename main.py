@@ -9,6 +9,7 @@ from helpers import solar_irradiance_estimator, astronomical_calculations
 from helpers import reflection_estimator
 from helpers import panel_temperature_estimator
 from helpers import output_estimator
+from helpers import preprocessing
 
 import pandas as pd
 
@@ -195,7 +196,7 @@ def get_pvlib_data(day_range=3, data_fmi=None, data_file=None):
     elif data_file is not None:
         print("data_file provided")
         try:
-            data_pvlib = pd.read_csv(config.data_path + "/pvlib_data.csv", sep=config.data_file_sep)
+            data_pvlib = pd.read_csv(config.data_path + "/pvlib_data_" + config.write_file_name, sep=config.data_file_sep)
             data_pvlib.set_index("time", inplace=True)
             data_pvlib.index = pd.to_datetime(data_pvlib.index, utc=True)
 
@@ -285,47 +286,75 @@ def get_file_data():
     :return: Power output dataframe
     """
     # step 1. read the file
-    data_file = pd.read_csv(config.data_path + "/" + config.read_file_name, sep=config.data_file_sep)
+    data_file = pd.read_csv(config.data_path + "/" + config.read_file_name, 
+                            sep=config.data_file_sep, 
+                            header=config.header_length_helsinki
+                            )
+    data_file.rename(columns=config.col_name_dict_helsinki, inplace=True)
+    print(data_file.columns)
     data_file.set_index('utctime', inplace=True)
     data_file.index = pd.to_datetime(data_file.index, utc=True)
     data_file["time"] = pd.to_datetime(data_file.index, utc=True)
 
     # step 2. project irradiance components to plane of array:
     if not {"dni_poa", "dhi_poa", "ghi_poa"}.issubset(data_file.columns):
+        print("No projected irradiance components in columns. Calculating them...")
         data_file = helpers.irradiance_transpositions.irradiance_df_to_poa_df(data_file)
     else:
         print("Step 2. already done!")
 
     # step 3. simulate how much of irradiance components is absorbed:
     if not {"dni_rc", "dhi_rc", "ghi_rc"}.issubset(data_file.columns): 
+        print("No absorbed irradiance components in columns. Calculating them...")
         data_file = helpers.reflection_estimator.add_reflection_corrected_poa_components_to_df(data_file)
     else:
         print("Step 3. already done!")
 
     # step 4. compute sum of reflection-corrected components:
     if "poa_ref_cor" not in data_file.columns:
+        print("No poa_ref_cor in columns. Calculating it...")
         data_file = helpers.reflection_estimator.add_reflection_corrected_poa_to_df(data_file)
     else:
         print("Step 4. already done!")
     
     # step 5. estimate panel temperature based on wind speed, air temperature and absorbed radiation if it's not measured:
     if "module_temp" not in data_file.columns:
-        data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
+        if {"module_temp_1", "module_temp_2"}.issubset(data_file.columns):
+            print("Two module_temp values in columns. Averaging them...")
+            data_file["module_temp"] = preprocessing.merge_measurements(data_file, ["module_temp_1", "module_temp_2"], 10)
+            data_file.drop(columns=["module_temp_1", "module_temp_2"], inplace=True)
+        else:
+            print("No module_temp in columns. Calculating it...")
+            data_file = helpers.panel_temperature_estimator.add_estimated_panel_temperature(data_file)
     else:
         print("Step 5. already done!")
     
     # step 6. estimate cell temperature based on module temperature, and absorbed radiation if it's not measured:
     if "cell_temp" not in data_file.columns:
+        print("No cell_temp in columns. Calculating it...")
         data_file = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data_file)
     else:
         print("Step 6. already done!")
 
     # step 7. estimate power output
     if not {"huld_general", "pvwatts"}.issubset(data_file.columns):
+        print("No power outputs in columns. Calculating them...")
         data_file = helpers.output_estimator.add_output_to_df(data_file)
     else:
         print("Step 7. already done!")
 
+    # keep only necessary columns
+    print("Keeping only necessary columns...")
+    data_file = data_file[["time",
+                           "ghi", "dhi", "dni", "poa",
+                           "ghi_poa", "dhi_poa", "dni_poa",
+                           "ghi_rc", "dhi_rc", "dni_rc",
+                           "poa_ref_cor",
+                           "module_temp", "cell_temp",
+                           "wind", "T", 
+                           "power",
+                           "huld_general", "pvwatts"]]
+    
     return data_file
 
 
@@ -354,7 +383,7 @@ def combined_processing_of_data():
     if config.save_data_csv:
         data_file.to_csv(config.data_path + "/" + config.write_file_name, sep=config.data_file_sep)
         if data_fmi is None: # Save pvlib data only if FMI forecast is not made.
-            data_pvlib.to_csv(config.data_path + "/pvlib_data.csv", sep=config.data_file_sep)
+            data_pvlib.to_csv(config.data_path + "/pvlib_data_" + config.write_file_name, sep=config.data_file_sep)
     # this line prints the full results into console/terminal
 
     # if config.console_print:
@@ -412,7 +441,7 @@ def combined_processing_of_data():
     plotter.plot_fmi_pvlib_mono(data_pvlib=data_pvlib, 
                                 data_fmi=data_fmi, 
                                 data_file=data_file, 
-                                start_date="2019-06-02", 
+                                start_date="2020-06-02", 
                                 day_range=2)
 
 
