@@ -23,23 +23,31 @@ longitude_helsinki = 24.9625
 latitude_kuopio = 62.8919
 longitude_kuopio = 27.6349
 
+latitude_sodankyla = 67.367
+longitude_sodankyla = 26.650
+
 latitude_turku = 60.45
 longitude_turku = 22.30
 
 elevation_helsinki = 17
 elevation_kuopio = 10
+elevation_sodankyla = 4
 elevation_turku = 5 # What is elevation for Turku?
 
 tilt_helsinki = 15
 tilt_kuopio = 15
+tilt_sodankyla_20 = 20
+tilt_sodankyla_90 = 90
 tilt_turku = 15
 
 azimuth_helsinki = 135
 azimuth_kuopio = 217
+azimuth_sodankyla = 115
 azimuth_turku = 180
 
 rated_power_kuopio = 20.28  # [kWp]
 rated_power_helsinki = 21  # [kWp]
+rated_power_sodankyla = 0.260  # [kWp]
 rated_power_turku = 4.5  # [kWp]
 
 
@@ -79,43 +87,117 @@ timezone = "UTC"
 data_resolution = 1
 
 # functions like this can be used for easily running the code for multiple installations
-def set_params_helsinki():
+def set_params_helsinki(read_file="FMI_Helsinki_PV.csv", write_file=""):
+    global latitude, longitude, tilt, azimuth, rated_power, module_elevation, site_name, read_file_name, write_file_name, save_data_csv, header_length, col_name_dict
     latitude = latitude_helsinki
     longitude = longitude_helsinki
     tilt = tilt_helsinki
     azimuth = azimuth_helsinki
     rated_power = rated_power_helsinki
     module_elevation = elevation_helsinki
+    site_name = "Helsinki"
+    read_file_name = read_file
+    write_file_name = write_file
+    if write_file != "":
+        save_data_csv = True
+    else:
+        save_data_csv = False
+    if read_file == "FMI_Helsinki_PV.csv":
+        header_length = 67
+    else:
+        header_length = 0
+    col_name_dict = col_name_dict_helsinki
 
-def set_params_kuopio():
+def set_params_kuopio(read_file="FMI_Kuopio_PV.csv", write_file=""):
+    global latitude, longitude, tilt, azimuth, rated_power, module_elevation, site_name, read_file_name, write_file_name, save_data_csv, header_length, col_name_dict
     latitude = latitude_kuopio
     longitude = longitude_kuopio
     tilt = tilt_kuopio
     azimuth = azimuth_kuopio
     rated_power = rated_power_kuopio
     module_elevation = elevation_kuopio
+    site_name = "Kuopio"
+    read_file_name = read_file
+    write_file_name = write_file
+    if write_file != "":
+        save_data_csv = True
+    else:
+        save_data_csv = False
+    if read_file == "FMI_Kuopio_PV.csv":
+        header_length = 67
+    else:
+        header_length = 0
+    col_name_dict = col_name_dict_kuopio
+
+def set_params_sodankyla_20(read_file="FMI_Sodankyla_20deg_PV.csv", write_file=""):
+    global latitude, longitude, tilt, azimuth, rated_power, module_elevation, site_name, read_file_name, write_file_name, save_data_csv, header_length, col_name_dict
+    latitude = latitude_sodankyla
+    longitude = longitude_sodankyla
+    tilt = tilt_sodankyla_20
+    azimuth = azimuth_sodankyla
+    rated_power = rated_power_sodankyla
+    module_elevation = elevation_sodankyla
+    site_name = "Sodankyla_20"
+    #file_name = "FMI_Sodankyla_20deg_PV"
+    read_file_name = read_file
+    write_file_name = write_file
+    if write_file != "":
+        save_data_csv = True
+    else:
+        save_data_csv = False
+    if read_file == "FMI_Sodankyla_20deg_PV.csv":
+        header_length = 93
+    else:
+        header_length = 0
+    col_name_dict = col_name_dict_sodankyla_20
+
+
+def set_params_sodankyla_90(read_file="FMI_Sodankyla_90deg_PV.csv", write_file=""):
+    global latitude, longitude, tilt, azimuth, rated_power, module_elevation, site_name, read_file_name, write_file_name, save_data_csv, header_length, col_name_dict
+    latitude = latitude_sodankyla
+    longitude = longitude_sodankyla
+    tilt = tilt_sodankyla_90
+    azimuth = azimuth_sodankyla
+    rated_power = rated_power_sodankyla
+    module_elevation = elevation_sodankyla
+    site_name = "Sodankyla_90"
+    #file_name = "FMI_Sodankyla_20deg_PV"
+    read_file_name = read_file
+    write_file_name = write_file
+    if write_file_name != "":
+        save_data_csv = True
+    else:
+        save_data_csv = False
+    if read_file == "FMI_Sodankyla_90deg_PV.csv":
+        header_length = 93
+    else:
+        header_length = 0
+    col_name_dict = col_name_dict_sodankyla_90
 
 def set_params_turku():
+    global latitude, longitude, tilt, azimuth, rated_power, module_elevation, site_name, read_file_name, write_file_name, save_data_csv, header_length, col_name_dict
     latitude = latitude_turku
     longitude = longitude_turku
     tilt = tilt_turku
     azimuth = azimuth_turku
     rated_power = rated_power_turku
     module_elevation = elevation_turku
+    site_name = "Turku"
+    #read_file_name = "TUAS_Turku_PV"
 
 
 ########### PARAMETERS FOR DATA FILES BELOW:
 data_path = "data"
-read_file_name = "b2share/FMI_Helsinki_PV.csv"
+read_file_name = "" #"b2share/FMI_Helsinki_PV.csv"
 # read_file_name = "FMI_Kuopio_PV_2.csv"
-write_file_name = "FMI_Helsinki_PV_2.csv"
+write_file_name = "" #"FMI_Helsinki_PV_filtered.csv"
 data_file_sep = ";"
-save_data_csv = True
+save_data_csv = False
 
 # Header length tells how many rows of the file are metatext
-header_length_helsinki = 67
-header_length_kuopio = 67
-header_length_sodankyla = 93
+header_length_helsinki = 0 #67
+header_length_kuopio = 0 #67
+header_length_sodankyla = 0 #93
 
 col_name_dict_helsinki = {
     'fmisid': 'id',

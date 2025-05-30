@@ -167,7 +167,8 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
             end_date = start_date + datetime.timedelta(days=day_range)
 
         data = data_file.loc[(data_file.index >= start_date) & (data_file.index < end_date), :]
-        data_pvlib = data_pvlib.loc[(data_pvlib.index >= start_date) & (data_pvlib.index < end_date), :]
+        if data_pvlib is not None:
+            data_pvlib = data_pvlib.loc[(data_pvlib.index >= start_date) & (data_pvlib.index < end_date), :]
 
         # generate timestamp string for file name
         timestamp = str(start_date)
@@ -175,7 +176,8 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
     f, (a0, a1) = matplotlib.pyplot.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(12, 6))
 
     # plotting pvlib and fmi data
-    a0.plot(data_pvlib.index, data_pvlib["huld_general"], label="Theoretical clear sky generation", c="#6ec8fa")
+    if data_pvlib is not None:
+        a0.plot(data_pvlib.index, data_pvlib["huld_general"], label="Theoretical clear sky generation", c="#6ec8fa")
 
 
     a0.plot(data.index, data["huld_general"],
@@ -198,7 +200,8 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
     a1.set_ylabel("Energy(kWh)")
 
     # calculating kwh sums for pvlib
-    pvlib_x, pvlib_y = __get_dayily_power_sums(data_pvlib, config.data_resolution) # pvlib resolution can be any
+    if data_pvlib is not None:
+        pvlib_x, pvlib_y = __get_dayily_power_sums(data_pvlib, config.data_resolution) # pvlib resolution can be any
 
     # calculating khw sums for the other data
     if data_fmi is not None:
@@ -208,7 +211,8 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
 
 
     # plotting kwh sums on second plot
-    a1.bar(pvlib_x, pvlib_y, color="#6ec8fa")
+    if data_pvlib is not None:
+        a1.bar(pvlib_x, pvlib_y, color="#6ec8fa")
     a1.bar(data_x, data_y, color="#303193")
 
     # adding simulation runtime as vertical line
@@ -218,28 +222,29 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
         a0.plot([now, now], [0, v_line_max], color="silver", linestyle='--')
 
 
-    # adding xxkWh (xx%) text to second plot
-    for i in range(len(data_x)):
-        pvlib_kwh = pvlib_y[i]
-        data_kwh = data_y[i]
-        fraction_kwh = data_kwh / pvlib_kwh
-        percents = round(fraction_kwh * 100)
-        txt = str(data_y[i]) + "kWh\n(" + str(percents) + "%)"
+    # adding xxkWh (xx%) text to second plot is pvlib data (clear-sky is given)
+    if data_pvlib is not None:
+        for i in range(len(data_x)):
+            pvlib_kwh = pvlib_y[i]
+            data_kwh = data_y[i]
+            fraction_kwh = data_kwh / pvlib_kwh
+            percents = round(fraction_kwh * 100)
+            txt = str(data_y[i]) + "kWh\n(" + str(percents) + "%)"
 
-        # this mess here should make sure that kwh numbers do not overlap in bar charts. This shifts
-        # text in y-axis if texts are too close
-        if i == 0:
-            a1.text(data_x[i], data_y[i] / 2, txt, ha="center", backgroundcolor="#FFFFFFd5")
-        if i > 0:
-            last_y_position = data_y[i - 1] / 2
-            new_y_position = data_y[i] / 2
+            # this mess here should make sure that kwh numbers do not overlap in bar charts. This shifts
+            # text in y-axis if texts are too close
+            if i == 0:
+                a1.text(data_x[i], data_y[i] / 2, txt, ha="center", backgroundcolor="#FFFFFFd5")
+            if i > 0:
+                last_y_position = data_y[i - 1] / 2
+                new_y_position = data_y[i] / 2
 
-            if last_y_position < new_y_position < last_y_position * 1.2:
-                new_y_position = last_y_position * 1.2
-            if last_y_position > new_y_position > last_y_position * 0.8:
-                new_y_position = last_y_position * 0.8
+                if last_y_position < new_y_position < last_y_position * 1.2:
+                    new_y_position = last_y_position * 1.2
+                if last_y_position > new_y_position > last_y_position * 0.8:
+                    new_y_position = last_y_position * 0.8
 
-            a1.text(data_x[i], new_y_position, txt, ha="center", backgroundcolor="#FFFFFFd5")
+                a1.text(data_x[i], new_y_position, txt, ha="center", backgroundcolor="#FFFFFFd5")
 
     # formatting plot 1 date axis
     a0.xaxis.set_major_formatter(DateFormatter("%m-%d"))
