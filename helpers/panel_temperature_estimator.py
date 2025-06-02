@@ -173,10 +173,11 @@ def temperature_of_module(absorbed_radiation: float, wind: float, module_elevati
     return module_temperature
 
 
-def temperature_of_cell(absorbed_radiation: float, module_temp: float) ->float:
+def temperature_of_cell(absorbed_radiation: float, module_temp: float, deltaT: float) ->float:
     """
     :param absorbed_radiation: radiation hitting solar panel after reflections are accounted for in W
     :param module_temperature: module temperature in Celsius
+    :param deltaT: Temperature difference of the cell and module (see Sandia temperature model)
     :return: cell temperature in Celsius
 
     King 2004 model
@@ -184,10 +185,6 @@ def temperature_of_cell(absorbed_radiation: float, module_temp: float) ->float:
     Photovoltaic Array Performance Model Vol. 8,
     PhD thesis (Sandia Naitional Laboratories, 2004).
     """
-
-    # Temperature difference of the cell and module.
-    # NOTE changes between installations, and fine-tuning might be needed for accuracy.
-    deltaT = 3
 
     cell_temperature = module_temp + absorbed_radiation / 1000 * deltaT
 
