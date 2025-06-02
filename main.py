@@ -10,6 +10,7 @@ from helpers import reflection_estimator
 from helpers import panel_temperature_estimator
 from helpers import output_estimator
 from helpers import preprocessing
+from helpers import filters
 
 import pandas as pd
 
@@ -288,9 +289,9 @@ def get_file_data():
     # step 1. read the file
     data_file = pd.read_csv(config.data_path + "/" + config.read_file_name, 
                             sep=config.data_file_sep, 
-                            header=config.header_length_helsinki
+                            header=config.header_length
                             )
-    data_file.rename(columns=config.col_name_dict_helsinki, inplace=True)
+    data_file.rename(columns=config.col_name_dict, inplace=True)
     print(data_file.columns)
     data_file.set_index('utctime', inplace=True)
     data_file.index = pd.to_datetime(data_file.index, utc=True)
@@ -366,6 +367,9 @@ def combined_processing_of_data():
 
     day_range = 3
 
+    #config.set_params_sodankyla_90("FMI_Sodankyla_90deg_PV", "FMI_Sodankyla_90deg_PV_filtered")
+    config.set_params_helsinki("FMI_Helsinki_PV.csv", "FMI_Helsinki_PV_filtered.csv")
+
     # Reading file containing historical weather and PV data
     data_file = get_file_data()
     # data_file = None
@@ -377,13 +381,14 @@ def combined_processing_of_data():
     data_fmi = None
 
     # generating pvlib irradiance values and clear sky pv dataframe, passing fmi data to pvlib generator functions
-    # for wind and air temp transfer
-    data_pvlib = get_pvlib_data(day_range=day_range, data_fmi=data_fmi, data_file=data_file)
+    # for wind and air temp transfer (currently doesn't work properly, and might even be removed from this fork)
+    # data_pvlib = get_pvlib_data(day_range=day_range, data_fmi=data_fmi, data_file=data_file)
+    data_pvlib = None
 
     if config.save_data_csv:
         data_file.to_csv(config.data_path + "/" + config.write_file_name, sep=config.data_file_sep)
-        if data_fmi is None: # Save pvlib data only if FMI forecast is not made.
-            data_pvlib.to_csv(config.data_path + "/pvlib_data_" + config.write_file_name, sep=config.data_file_sep)
+        # if data_fmi is None: # Save pvlib data only if FMI forecast is not made.
+        #     data_pvlib.to_csv(config.data_path + "/pvlib_data_" + config.write_file_name, sep=config.data_file_sep)
     # this line prints the full results into console/terminal
 
     # if config.console_print:
