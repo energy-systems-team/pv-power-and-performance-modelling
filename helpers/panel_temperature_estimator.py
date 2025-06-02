@@ -144,12 +144,15 @@ def add_wind_and_temp_to_df1_from_df2(df1: pandas.DataFrame, df2: pandas.DataFra
     return df1
 
 
-def temperature_of_module(absorbed_radiation: float, wind: float, module_elevation: float, air_temperature: float) ->float:
+def temperature_of_module(absorbed_radiation: float, wind: float, module_elevation: float, air_temperature: float,
+                          constant_a=-3.47, constant=-0.0594) ->float:
     """
     :param absorbed_radiation: radiation hitting solar panel after reflections are accounted for in W
     :param wind: wind speed in meters per second
     :param module_elevation: module elevation from ground, in meters
     :param air_temperature: air temperature at 2m in Celsius
+    :param constant_a: empirical constant (see Sandia temperature model)
+    :param constant_b: empirical constant (see Sandia temperature model)
     :return: module temperature in Celsius
 
     King 2004 model
@@ -157,10 +160,6 @@ def temperature_of_module(absorbed_radiation: float, wind: float, module_elevati
     Photovoltaic Array Performance Model Vol. 8,
     PhD thesis (Sandia Naitional Laboratories, 2004).
     """
-
-    # two empirical constants
-    constant_a = -3.47
-    constant_b = -0.0594
 
     # wind is sometimes given as west/east components
 
@@ -177,7 +176,7 @@ def temperature_of_cell(absorbed_radiation: float, module_temp: float, deltaT: f
     """
     :param absorbed_radiation: radiation hitting solar panel after reflections are accounted for in W
     :param module_temperature: module temperature in Celsius
-    :param deltaT: Temperature difference of the cell and module (see Sandia temperature model)
+    :param deltaT: temperature difference of the cell and module (see Sandia temperature model)
     :return: cell temperature in Celsius
 
     King 2004 model
