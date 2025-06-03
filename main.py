@@ -333,7 +333,7 @@ def get_file_data():
     # step 6. estimate cell temperature based on module temperature, and absorbed radiation if it's not measured:
     if "cell_temp" not in data_file.columns:
         print("No cell_temp in columns. Calculating it...")
-        data_file = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data_file)
+        data_file = helpers.panel_temperature_estimator.add_estimated_cell_temperature(data_file, 1)
     else:
         print("Step 6. already done!")
 
