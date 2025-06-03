@@ -55,11 +55,22 @@ def add_output_to_df(df: pandas.DataFrame)-> pandas.DataFrame:
         # this line makes sure the output estimation is not called when per w² radiation is below 0.1W. If the radiation is
         # this low, the system would not produce any power and values of 0.0 cause issues as the output model contains
         # logarithms
-        df['huld_general'] = df.apply(lambda row: 0.0 if row['poa_ref_cor'] < 0.1 else __estimate_huld_general(row['poa_ref_cor'], row['module_temp']), axis=1 )
+        df['huld_general'] = 0.0  # Initialize with default
+
+        irradiance_mask = df['poa_ref_cor'] >= 0.1
+        df.loc[irradiance_mask, 'huld_general'] = __estimate_huld_general(
+            df.loc[irradiance_mask, 'poa_ref_cor'],
+            df.loc[irradiance_mask, 'module_temp']
+        )
         # filling nans
         df['huld_general'] = df['huld_general'].fillna(0.0)
 
-        df['pvwatts'] = df.apply(lambda row: 0.0 if row['poa_ref_cor'] < 0.1 else __estimate_pvwatts(row['poa_ref_cor'], row['cell_temp']), axis=1 )
+        df['pvwatts'] = 0.0  # Initialize with default
+
+        df.loc[irradiance_mask, 'pvwatts'] = __estimate_pvwatts(
+            df.loc[irradiance_mask, 'poa_ref_cor'],
+            df.loc[irradiance_mask, 'cell_temp']
+)
         # filling nans
         df['pvwatts'] = df['pvwatts'].fillna(0.0)
 
