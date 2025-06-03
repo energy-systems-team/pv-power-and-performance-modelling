@@ -3,7 +3,7 @@ This file contains functions for estimating PV panel temperatures and transferri
 dataframe.
 
 Original author: TimoSalola (Timo Salola).
-Edited by: Väinö Anttalainen
+Edited by: Väinö Anttalainen and Lauri Karttunen
 """
 
 import math
@@ -145,7 +145,7 @@ def add_wind_and_temp_to_df1_from_df2(df1: pandas.DataFrame, df2: pandas.DataFra
 
 
 def temperature_of_module(absorbed_radiation: float, wind: float, module_elevation: float, air_temperature: float,
-                          constant_a=-3.47, constant=-0.0594) ->float:
+                          constant_a=-3.47, constant_b=-0.0594) ->float:
     """
     :param absorbed_radiation: radiation hitting solar panel after reflections are accounted for in W
     :param wind: wind speed in meters per second
