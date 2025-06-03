@@ -70,7 +70,7 @@ def daytime(data):
     return ~nighttime(data)
 
 
-def rolling_outlier_filter(data, window_size):
+def rolling_outlier_filter(data, window_size, window_width=2):
     """    
     Power-irradiance outliers are filtered by applying a rolling horizon filter and excluding points outside +-2 STD outside
     rolling horizon mean.
@@ -78,6 +78,7 @@ def rolling_outlier_filter(data, window_size):
     Args:
         data (pandas DataFrame): dataframe with power and poa columns
         window_size (int): number of points withing the rolling window
+        window_width (float): how many standard deviations are used as the filtering conditions
 
     Returns: Filtering mask (Pandas Series object)
     """
@@ -95,8 +96,8 @@ def rolling_outlier_filter(data, window_size):
     rolling_sd = p_poa.rolling(window=window_size).std()
 
     # Define the upper and lower bounds
-    upper_bound = rolling_mean + 2 * rolling_sd
-    lower_bound = rolling_mean - 2 * rolling_sd
+    upper_bound = rolling_mean + window_width * rolling_sd
+    lower_bound = rolling_mean - window_width * rolling_sd
 
     p_poa_mask = (p_poa < upper_bound) & (p_poa > lower_bound)
 
