@@ -4,7 +4,7 @@ Functions for generating and saving plots.
 Original author: TimoSalola (Timo Salola).
 Edited by: Väinö Anttalainen
 """
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 import matplotlib.dates
 import pandas
 from matplotlib import dates
@@ -22,9 +22,9 @@ global ax
 def init_plot():
     global fig
     global ax
-    matplotlib.pyplot.rcParams['figure.constrained_layout.use'] = True
-    fig = matplotlib.pyplot.figure(figsize=(12, 8))
-    ax = matplotlib.pyplot.axes()
+    plt.rcParams['figure.constrained_layout.use'] = True
+    fig = plt.figure(figsize=(12, 8))
+    ax = plt.axes()
     format_time_axis()
 
 
@@ -34,15 +34,15 @@ def ticks():
 
 
 def show_plot():
-    matplotlib.pyplot.show()
+    plt.show()
 
 
 # PLOT TITLES, LEGENDS, LABELS ETC ########################
 def add_title(title, fontsize=None):
     if fontsize is None:
-        matplotlib.pyplot.title(title)
+        plt.title(title)
     else:
-        matplotlib.pyplot.title(title, fontsize=fontsize)
+        plt.title(title, fontsize=fontsize)
 
 
 def add_label_x(label, fontsize=None):
@@ -61,9 +61,9 @@ def add_label_y(label, fontsize=None):
 
 def show_legend(fontsize=None):
     if fontsize is None:
-        matplotlib.pyplot.legend(loc='upper right')
+        plt.legend(loc='upper right')
     else:
-        matplotlib.pyplot.legend(fontsize=fontsize, loc='upper right')
+        plt.legend(fontsize=fontsize, loc='upper right')
 
 
 def format_time_axis():
@@ -89,13 +89,13 @@ def plot_curve(x, y, label=None, color=None, alpha=1, width=1):
 
 def fill_between(x, y1, y2, label=None):
     if label is not None:
-        matplotlib.pyplot.fill_between(x, y1, y2, label=label)
+        plt.fill_between(x, y1, y2, label=label)
     else:
-        matplotlib.pyplot.fill_between(x, y1, y2)
+        plt.fill_between(x, y1, y2)
 
 
 def set_size(x, y):
-    matplotlib.pyplot.figure(figsize=(x, y))
+    plt.figure(figsize=(x, y))
 
 
 # COMPOUND FUNCTIONS ############################################
@@ -116,13 +116,135 @@ def plot_kwh_labels(df, y_offset=0):
         x_value = datetime.datetime(index.year, index.month, index.day, 8)
         output = round(row["output_kwh"], -1)
         text = str(output) + " kWh"
-        matplotlib.pyplot.text(x_value, y_offset, text)
+        plt.text(x_value, y_offset, text)
 
 
 def default_labels_and_title(date):
     add_title("Solar PV forecast: " + str(date))
     add_label_y("Power(W)")
     add_label_x("Time")
+
+
+def plot_power_profiles(data, start_date="", day_range=-1):
+    """
+    :param data:
+    :return:
+    """
+
+    if start_date=="":
+        start_date = data.index[0]
+    else:
+        start_date = pandas.to_datetime(start_date, utc=True)
+
+    if day_range == -1:
+        end_date = data.index[-1]
+    else:
+        end_date = start_date + datetime.timedelta(days=day_range)
+
+    data = data.loc[(data.index >= start_date) & (data.index < end_date), :]
+    
+    # generate timestamp string for file name
+    timestamp = str(start_date)
+
+    f, a = plt.subplots(figsize=(12, 6))
+
+    a.plot(data.index, data["huld_general"],
+            label="General Huld model based generation", c="#303193", alpha=0.5)
+    a.plot(data.index, data["pvwatts"],
+            label="PVWatts model based generation", alpha=0.5)
+    a.plot(data.index, data["power"], 
+            label="Actual power", alpha=0.5)
+
+    # adding legend
+    a.legend(loc='upper right')
+
+    # plot 0 labels
+    a.set_ylabel("Power(W)")
+    a.set_xlabel("Time(UTC)")
+
+    # formatting plot 1 date axis
+    a.xaxis.set_major_formatter(DateFormatter("%m-%d"))
+    a.xaxis.set_major_locator(matplotlib.dates.DayLocator(interval=1))
+    a.xaxis.set_minor_locator(matplotlib.dates.HourLocator(interval=4))
+    a.xaxis.set_minor_formatter(DateFormatter("%H"))
+
+    # moves major axis to top of plot
+    a.tick_params(axis="x", which="major", top=True, labeltop=True, bottom=False, labelbottom=False)
+
+    # shifts markers for days from midnight to near middle of power generation peaks
+    shifter = matplotlib.dates.HourLocator(byhour=10)
+    a.xaxis.set_major_locator(shifter)
+
+    # using tight graph layout to help with data density
+    f.tight_layout()
+
+    # saving plot as .png -file
+
+    timestamp = timestamp.replace(":", "-")
+    savepath = (config.save_directory + config.site_name + "-" + timestamp + ".png")
+    plt.savefig(savepath)
+    print("Simulation plot saved as '" + savepath + "'")
+    print("-------------------------------------------------------------------------------------------------------")
+
+    plt.show()
+
+
+def plot_energy_yields(data, start_date="", day_range=-1):
+    """
+    :param data:
+    :return:
+    """
+
+    if start_date=="":
+        start_date = data.index[0]
+    else:
+        start_date = pandas.to_datetime(start_date, utc=True)
+
+    if day_range == -1:
+        end_date = data.index[-1]
+    else:
+        end_date = start_date + datetime.timedelta(days=day_range)
+
+    data = data.loc[(data.index >= start_date) & (data.index < end_date), :]
+    
+    # generate timestamp string for file name
+    timestamp = str(start_date)
+
+    f, a = plt.subplots(figsize=(12, 6))
+
+    # adding titles for both plots
+    # a0.set_title('Power generation "' + config.site_name + "\" " + timestamp + "UTC")
+    a.set_title('Energy generation')
+
+    a.set_xlabel("Date")
+    a.set_ylabel("Energy(kWh)")
+
+    # calculating khw sums for the other data
+    data_x, data_y = __get_daily_power_sums(data, config.data_resolution)
+
+
+    # plotting kwh sums on second plot
+    a.bar(data_x, data_y, color="#303193")
+
+    # formatting plot 2 date axis so that 2023-11-23 is shown as 11-23
+    formatter = DateFormatter("%m-%d")
+    a.xaxis.set_major_formatter(formatter)
+
+    # formatting plot 2 date axis so that markers are shown only once per day
+    a.xaxis.set_major_locator(matplotlib.dates.DayLocator(interval=1))
+
+    # using tight graph layout to help with data density
+    f.tight_layout()
+
+    # saving plot as .png -file
+
+    timestamp = timestamp.replace(":", "-")
+    savepath = (config.save_directory + config.site_name + "-" + timestamp + ".png")
+    plt.savefig(savepath)
+    print("Simulation plot saved as '" + savepath + "'")
+    print("-------------------------------------------------------------------------------------------------------")
+
+    plt.show()
 
 
 def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date="", day_range=-1):
@@ -173,7 +295,7 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
         # generate timestamp string for file name
         timestamp = str(start_date)
 
-    f, (a0, a1) = matplotlib.pyplot.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(12, 6))
+    f, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, figsize=(12, 6))
 
     # plotting pvlib and fmi data
     if data_pvlib is not None:
@@ -273,14 +395,14 @@ def plot_fmi_pvlib_mono(data_pvlib, data_fmi=None, data_file=None, start_date=""
 
     timestamp = timestamp.replace(":", "-")
     savepath = (config.save_directory + config.site_name + "-" + timestamp + ".png")
-    matplotlib.pyplot.savefig(savepath)
+    plt.savefig(savepath)
     print("Simulation plot saved as '" + savepath + "'")
     print("-------------------------------------------------------------------------------------------------------")
 
-    #matplotlib.pyplot.show()
+    #plt.show()
 
 
-def __get_dayily_power_sums(data, resolution=config.data_resolution):
+def __get_daily_power_sums(data, resolution=config.data_resolution):
     #  df = data[["time", "huld_general"]].copy()
 #  
     #  df["date"] = pandas.to_datetime(df["time"]).dt.date
