@@ -369,6 +369,7 @@ def combined_processing_of_data():
 
     #config.set_params_sodankyla_90("FMI_Sodankyla_90deg_PV", "FMI_Sodankyla_90deg_PV_filtered")
     config.set_params_helsinki("FMI_Helsinki_PV.csv", "FMI_Helsinki_PV_filtered.csv")
+    config.set_params_helsinki("FMI_Helsinki_PV_filtered.csv")
 
     # Reading file containing historical weather and PV data
     data_file = get_file_data()
@@ -442,13 +443,7 @@ def combined_processing_of_data():
     #      print(f"describe data_file: {data_file.describe().T}")
     #      print(data_file.head(1))
     #      print()
-
-    plotter.plot_fmi_pvlib_mono(data_pvlib=data_pvlib, 
-                                data_fmi=data_fmi, 
-                                data_file=data_file, 
-                                start_date="2020-06-02", 
-                                day_range=2)
-
+    plotter.plot_power_profiles(data_file, "2020-06-03", 3)
 
 
 combined_processing_of_data()
