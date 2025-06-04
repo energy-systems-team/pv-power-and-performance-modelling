@@ -59,12 +59,14 @@ def add_estimated_panel_temperature(df, constant_a=-3.47, constant_b=-0.0594) ->
     return df
 
 
-def add_estimated_cell_temperature(df, deltaT: float) ->float:
+def add_estimated_cell_temperature(df, deltaT: float, temperature_name='module_temp', poa_name='poa_ref_cor') ->float:
     """
     Adds an estimate for cell temperature based on module temperature, and absorbed radiation.
     If module temperature, or absorbed radiation columns are missing, aborts.
     :param df:
     :param deltaT:
+    :param temperature_name: column name of module temperature
+    :param poa_name: column name for POA irradiance
     :return:
 
     King 2004 model
@@ -73,20 +75,9 @@ def add_estimated_cell_temperature(df, deltaT: float) ->float:
     PhD thesis (Sandia Naitional Laboratories, 2004).
     
     """
-
-    # checking that all required variables exist in df
-    if "module_temp" not in df.columns:
-        print("No module temperature variable in given dataframe")
-        print("Aborting")
-        return df
-
-    if "poa_ref_cor" not in df.columns:
-        print("no reflection corrected poa value in df 'poa_ref_cor'")
-        print("Aborting")
-        return df
     
-    absorbed_radiation = df["poa_ref_cor"]
-    module_temp = df["module_temp"]
+    absorbed_radiation = df[poa_name]
+    module_temp = df[temperature_name]
 
     cell_temperature = module_temp + absorbed_radiation / 1000 * deltaT
 
